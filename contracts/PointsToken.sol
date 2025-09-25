@@ -19,4 +19,9 @@ contract PointsToken is ERC20, Ownable {
     function transferFrom(address, address, uint256) public pure override returns (bool) {
         revert("Puntos no son transferibles");
     }
+
+    // 👇 Agregar esta parte
+    function decimals() public pure override returns (uint8) {
+        return 0; // tus puntos serán enteros, sin decimales
+    }
 }
