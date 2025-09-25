@@ -17,6 +17,7 @@ function App() {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const { chainId } = await provider.getNetwork();
 
+      // Verificar red (Sepolia)
       if (chainId.toString() !== "11155111") {
         try {
           await window.ethereum.request({
@@ -31,8 +32,13 @@ function App() {
         }
       }
 
-      const [addr] = await window.ethereum.request({ method: "eth_requestAccounts" });
+      // Obtener cuenta
+      const [addr] = await window.ethereum.request({
+        method: "eth_requestAccounts",
+      });
       setAccount(addr);
+
+      // Obtener balance inicial
       await getBalance(addr);
     } catch (err) {
       console.error(err);
@@ -40,15 +46,19 @@ function App() {
     }
   }
 
-  // Consultar balance
+  // 🔹 Consultar balance
   async function getBalance(addr) {
     try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, abi.abi, provider);
-      const bal = await contract.balanceOf(addr);
-      setBalance(bal.toString());
+      const res = await fetch(`http://localhost:3001/balance/${addr}`);
+      const data = await res.json();
+      if (res.ok) {
+        setBalance(data.balance); // siempre actualizado desde backend
+      } else {
+        console.error("Error en backend:", data);
+        setBalance("0");
+      }
     } catch (err) {
-      console.error(err);
+      console.error("Error al obtener balance:", err);
       setBalance("0");
     }
   }
@@ -68,8 +78,8 @@ function App() {
         console.error(data);
         return alert("Error al pedir puntos: " + data.error);
       }
-      alert(`Transacción enviada: ${data.tx}`);
-      await getBalance(account);
+      alert(`Tx confirmada: ${data.tx}\nNuevo balance: ${data.newBalance}`);
+      setBalance(data.newBalance); // usar balance que devuelve backend
     } catch (err) {
       console.error(err);
       alert("Error al pedir puntos");
