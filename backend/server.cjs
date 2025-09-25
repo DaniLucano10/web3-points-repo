@@ -4,10 +4,8 @@ const cors = require("cors");
 const { ethers } = require("ethers");
 const dotenv = require("dotenv");
 
-// Cargar variables de entorno
 dotenv.config();
 
-// Cargar ABI del contrato
 const PointsTokenJson = require("../artifacts/contracts/PointsToken.sol/PointsToken.json");
 
 const app = express();
@@ -18,29 +16,34 @@ app.use(express.json());
 const provider = new ethers.JsonRpcProvider(process.env.SEPOLIA_RPC_URL);
 const wallet = new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY, provider);
 
-// Verificar que la wallet está bien
 console.log("Usando wallet:", wallet.address);
 
-// Conectar el contrato usando la dirección de .env
 const contract = new ethers.Contract(
   process.env.CONTRACT_ADDRESS,
   PointsTokenJson.abi,
   wallet
 );
 
-// RUTA: Mint de puntos (solo owner)
+// Mint de puntos
 app.post("/mint", async (req, res) => {
   try {
     const { user, amount } = req.body;
+    console.log(`Minting ${amount} puntos para ${user}`);
+
     const tx = await contract.mintPoints(user, amount);
     await tx.wait();
-    res.json({ ok: true, tx: tx.hash });
+
+    const newBalance = await contract.balanceOf(user);
+    console.log(`Nuevo balance de ${user}: ${newBalance.toString()}`);
+
+    res.json({ ok: true, tx: tx.hash, newBalance: newBalance.toString() });
   } catch (e) {
+    console.error("Error en /mint:", e);
     res.status(500).json({ error: e.message });
   }
 });
 
-// RUTA: Consultar balance de puntos
+// Balance
 app.get("/balance/:user", async (req, res) => {
   try {
     const balance = await contract.balanceOf(req.params.user);
@@ -51,4 +54,4 @@ app.get("/balance/:user", async (req, res) => {
 });
 
 const PORT = 3001;
-app.listen(PORT, () => console.log(`Backend running on ${PORT}`));
+app.listen(PORT, () => console.log(`Backend running on http://localhost:${PORT}`));
